@@ -129,7 +129,7 @@ namespace Bezier
     {
         inline static constexpr float valueAt(float alpha)
         {
-            return float(math::pow<one_minus_t>(1.0f - alpha) * math::pow<t>(alpha));
+            return float(Math::pow<one_minus_t>(1.0f - alpha) * Math::pow<t>(alpha));
         }
     };
 
