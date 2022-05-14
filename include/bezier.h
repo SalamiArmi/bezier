@@ -36,7 +36,7 @@ namespace Bezier
     {
         constexpr float PI = 3.14159265358979f;
 
-        inline size_t binomial(size_t n, size_t k)
+        inline constexpr size_t binomial(size_t n, size_t k)
         {
             assert(k <= n);
             size_t val = 1;
@@ -116,38 +116,12 @@ namespace Bezier
     class BinomialCoefficients
     {
     public:
-        BinomialCoefficients()
+        template <size_t idx>
+        inline static constexpr size_t valueAt()
         {
-            size_t center = N / 2;
-            size_t k = 0;
-
-            while (k <= center)
-            {
-                mCoefficients[k] = Math::binomial(N, k);
-                k++;
-            }
-
-            // Utilize the symmetrical nature of the binomial coefficients.
-            while (k <= N)
-            {
-                mCoefficients[k] = mCoefficients[N - k];
-                k++;
-            }
+            static_assert(idx < N + 1);
+            return Math::binomial(N, idx);
         }
-
-        static constexpr size_t size()
-        {
-            return N + 1;
-        }
-
-        const size_t operator [](size_t idx) const
-        {
-            assert(idx < size());
-            return mCoefficients[idx];
-        }
-
-    private:
-        size_t mCoefficients[size()]{0};
     };
 
     template <size_t t, size_t one_minus_t>
@@ -934,7 +908,7 @@ namespace Bezier
         template <size_t it>
         inline float valueAtInternal(float t, size_t axis) const
         {
-            return (binomialCoefficients[it] * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
+            return (BinomialCoefficients<N>::valueAt<it>() * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
         }
 
         ExtremeValues derivativeZero1() const
@@ -1008,14 +982,8 @@ namespace Bezier
             return xVals;
         }
 
-    public:
-        static const BinomialCoefficients<N> binomialCoefficients;
-
     private:
         std::array<Point, N+1> mControlPoints;
     };
-
-    template<size_t N>
-    const BinomialCoefficients<N> Bezier<N>::binomialCoefficients = BinomialCoefficients<N>();
 
 } // namespace Bezier
