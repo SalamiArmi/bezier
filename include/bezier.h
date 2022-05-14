@@ -52,6 +52,64 @@ namespace Bezier
         {
             return x >= -BEZIER_FUZZY_EPSILON && x <= (1.0 + BEZIER_FUZZY_EPSILON);
         }
+
+        namespace detail
+        {
+            template<size_t exponent, typename F>
+            struct pow_t
+            {
+                inline constexpr static F impl(F base)
+                {
+                    static_assert(exponent > 0);
+                    return base * pow_t<exponent - 1, F>::impl(base);
+                }
+            };
+            template<typename F>
+            struct pow_t<0, F>
+            {
+                inline constexpr static F impl(F base)
+                {
+                    return 1;
+                }
+            };
+            template<typename F>
+            struct pow_t<1, F>
+            {
+                inline constexpr static F impl(F base)
+                {
+                    return base;
+                }
+            };
+            template<typename F>
+            struct pow_t<2, F>
+            {
+                inline constexpr static F impl(F base)
+                {
+                    return base * base;
+                }
+            };
+            template<typename F>
+            struct pow_t<3, F>
+            {
+                inline constexpr static F impl(F base)
+                {
+                    return base * base * base;
+                }
+            };
+            template<typename F>
+            struct pow_t<4, F>
+            {
+                inline constexpr static F impl(F base)
+                {
+                    return base * base * base * base;
+                }
+            };
+        }
+        template<size_t exponent, typename F>
+        inline F constexpr pow(F base)
+        {
+            return detail::pow_t<exponent, F>::impl(base);
+        }
     }
 
     template<size_t N>
@@ -92,14 +150,12 @@ namespace Bezier
         size_t mCoefficients[size()]{0};
     };
 
+    template <size_t t, size_t one_minus_t>
     struct PolynomialPair
     {
-        size_t t = 0;
-        size_t one_minus_t = 0;
-
-        float valueAt(float t) const
+        inline static constexpr float valueAt(float alpha)
         {
-            return float(pow(1.0f - t, one_minus_t) * pow(t, float(this->t)));
+            return float(math::pow<one_minus_t>(1.0f - alpha) * math::pow<t>(alpha));
         }
     };
 
@@ -107,35 +163,12 @@ namespace Bezier
     class PolynomialCoefficients
     {
     public:
-        PolynomialCoefficients()
+        template <size_t pos>
+        inline static constexpr float valueAt(float t)
         {
-            for (size_t i = 0; i <= N; i++)
-            {
-                mPolynomialPairs[i].t = i;
-                mPolynomialPairs[i].one_minus_t = N - i;
-                assert(mPolynomialPairs[i].t + mPolynomialPairs[i].one_minus_t == N);
-            }
+            static_assert(pos < N + 1);
+            return PolynomialPair<pos, N - pos>::valueAt(t);
         }
-
-        float valueAt(size_t pos, float t) const
-        {
-            assert(pos < size());
-            return mPolynomialPairs[pos].valueAt(t);
-        }
-
-        static constexpr size_t size()
-        {
-            return N + 1;
-        }
-
-        const PolynomialPair& operator [](size_t idx) const
-        {
-            assert(idx < size());
-            return mPolynomialPairs[idx];
-        }
-
-    private:
-        PolynomialPair mPolynomialPairs[size()];
     };
 
     class Vec2
@@ -681,12 +714,7 @@ namespace Bezier
         float valueAt(float t, size_t axis) const
         {
             assert(axis < Vec2::size); // Currently only support 2D
-            float sum = 0;
-            for (size_t n = 0; n < N+1; n++)
-            {
-                sum += binomialCoefficients[n] * polynomialCoefficients[n].valueAt(t) * mControlPoints[n][axis];
-            }
-            return sum;
+            return valueAtInternal(t, axis, std::make_index_sequence<N + 1>());
         }
 
         Point valueAt(float t) const
@@ -898,6 +926,17 @@ namespace Bezier
         }
 
     private:
+        template <size_t... index_list>
+        inline float valueAtInternal(float t, size_t axis, std::index_sequence<index_list...>) const
+        {
+            return (valueAtInternal<index_list>(t, axis) + ...);
+        }
+        template <size_t it>
+        inline float valueAtInternal(float t, size_t axis) const
+        {
+            return (binomialCoefficients[it] * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
+        }
+
         ExtremeValues derivativeZero1() const
         {
             assert(N == 1);
@@ -971,7 +1010,6 @@ namespace Bezier
 
     public:
         static const BinomialCoefficients<N> binomialCoefficients;
-        static const PolynomialCoefficients<N> polynomialCoefficients;
 
     private:
         std::array<Point, N+1> mControlPoints;
@@ -979,8 +1017,5 @@ namespace Bezier
 
     template<size_t N>
     const BinomialCoefficients<N> Bezier<N>::binomialCoefficients = BinomialCoefficients<N>();
-
-    template<size_t N>
-    const PolynomialCoefficients<N> Bezier<N>::polynomialCoefficients = PolynomialCoefficients<N>();
 
 } // namespace Bezier
