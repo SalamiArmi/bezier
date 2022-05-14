@@ -908,7 +908,8 @@ namespace Bezier
         template <size_t it>
         inline float valueAtInternal(float t, size_t axis) const
         {
-            return (BinomialCoefficients<N>::valueAt<it>() * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
+            constexpr size_t binomialCoefficient = BinomialCoefficients<N>::valueAt<it>();
+            return (binomialCoefficient * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
         }
 
         ExtremeValues derivativeZero1() const
