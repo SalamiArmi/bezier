@@ -30,6 +30,19 @@
 #define BEZIER_DEFAULT_INTERVALS 10
 #define BEZIER_DEFAULT_MAX_ITERATIONS 15
 
+// forceinline (stolen from BOOST_FORCEINLINE) --------------------------------------------------//
+// Macro to use in place of 'inline' to force a function to be inline
+#if !defined(forceinline)
+#  if defined(_MSC_VER)
+#    define forceinline __forceinline
+#  elif defined(__GNUC__) && __GNUC__ > 3
+     // Clang also defines __GNUC__ (as 4)
+#    define forceinline inline __attribute__ ((__always_inline__))
+#  else
+#    define forceinline inline
+#  endif
+#endif
+
 namespace Bezier
 {
     namespace Math
@@ -58,7 +71,7 @@ namespace Bezier
             template<size_t exponent, typename F>
             struct pow_t
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     static_assert(exponent > 0);
                     return base * pow_t<exponent - 1, F>::impl(base);
@@ -67,7 +80,7 @@ namespace Bezier
             template<typename F>
             struct pow_t<0, F>
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     return 1;
                 }
@@ -75,7 +88,7 @@ namespace Bezier
             template<typename F>
             struct pow_t<1, F>
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     return base;
                 }
@@ -83,7 +96,7 @@ namespace Bezier
             template<typename F>
             struct pow_t<2, F>
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     return base * base;
                 }
@@ -91,7 +104,7 @@ namespace Bezier
             template<typename F>
             struct pow_t<3, F>
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     return base * base * base;
                 }
@@ -99,14 +112,14 @@ namespace Bezier
             template<typename F>
             struct pow_t<4, F>
             {
-                inline constexpr static F impl(F base)
+                forceinline constexpr static F impl(F base)
                 {
                     return base * base * base * base;
                 }
             };
         }
         template<size_t exponent, typename F>
-        inline F constexpr pow(F base)
+        forceinline F constexpr pow(F base)
         {
             return detail::pow_t<exponent, F>::impl(base);
         }
@@ -685,13 +698,13 @@ namespace Bezier
         }
 
     public:
-        float valueAt(float t, size_t axis) const
+        inline float valueAt(float t, size_t axis) const
         {
             assert(axis < Vec2::size); // Currently only support 2D
             return valueAtInternal(t, axis, std::make_index_sequence<N + 1>());
         }
 
-        Point valueAt(float t) const
+        inline Point valueAt(float t) const
         {
             Point p;
             for (size_t i = 0; i < Point::size; i++)
@@ -901,12 +914,12 @@ namespace Bezier
 
     private:
         template <size_t... index_list>
-        inline float valueAtInternal(float t, size_t axis, std::index_sequence<index_list...>) const
+        forceinline float valueAtInternal(float t, size_t axis, std::index_sequence<index_list...>) const
         {
             return (valueAtInternal<index_list>(t, axis) + ...);
         }
         template <size_t it>
-        inline float valueAtInternal(float t, size_t axis) const
+        forceinline float valueAtInternal(float t, size_t axis) const
         {
             constexpr size_t binomialCoefficient = BinomialCoefficients<N>::valueAt<it>();
             return (binomialCoefficient * PolynomialCoefficients<N>::valueAt<it>(t) * mControlPoints[it][axis]);
